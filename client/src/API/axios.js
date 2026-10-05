@@ -1,10 +1,12 @@
 import axios from 'axios';
 
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+  || window.location.hostname.endsWith('github.io');
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
-// Har request ke saath automatically token bhej do (agar available hai)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -13,4 +15,96 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default api;
+const demoUsersKey = 'cogniforge_demo_users';
+const demoMaterialsKey = 'cogniforge_demo_materials';
+
+const read = (key, fallback = []) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+};
+
+const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const id = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
+
+const demoError = (message, status = 400) => {
+  const error = new Error(message);
+  error.response = { status, data: { message } };
+  return error;
+};
+
+const demoUser = (user) => ({ id: user.id, name: user.name, email: user.email });
+
+const demoRequest = async (method, url, data) => {
+  const users = read(demoUsersKey);
+  const currentUserId = localStorage.getItem('cogniforge_demo_user_id');
+
+  if (method === 'post' && url === '/auth/signup') {
+    if (users.some((user) => user.email.toLowerCase() === data.email.toLowerCase())) {
+      throw demoError('User already exists');
+    }
+    const user = { id: id(), name: data.name, email: data.email, password: data.password };
+    write(demoUsersKey, [...users, user]);
+    localStorage.setItem('cogniforge_demo_user_id', user.id);
+    return { data: { message: 'Demo account created', token: `demo-${user.id}`, user: demoUser(user) } };
+  }
+
+  if (method === 'post' && url === '/auth/login') {
+    const user = users.find((candidate) => candidate.email.toLowerCase() === data.email.toLowerCase());
+    if (!user || user.password !== data.password) throw demoError('Invalid credentials');
+    localStorage.setItem('cogniforge_demo_user_id', user.id);
+    return { data: { message: 'Demo login successful', token: `demo-${user.id}`, user: demoUser(user) } };
+  }
+
+  if (!currentUserId) throw demoError('Please log in to continue', 401);
+
+  if (method === 'get' && url === '/materials') {
+    return { data: { materials: read(demoMaterialsKey).filter((material) => material.userId === currentUserId) } };
+  }
+
+  if (method === 'post' && url === '/materials/upload') {
+    const title = data.get('title') || data.get('pdf')?.name || 'Demo study material';
+    const material = {
+      id: id(),
+      title,
+      content: 'This is a GitHub Pages demo material. Connect a hosted backend to process real PDF text.',
+      userId: currentUserId,
+      createdAt: new Date().toISOString(),
+    };
+    write(demoMaterialsKey, [...read(demoMaterialsKey), material]);
+    return { data: { message: 'Demo material added', material } };
+  }
+
+  if (method === 'post' && url.startsWith('/ai/generate/')) {
+    const materialId = url.split('/').pop();
+    const material = read(demoMaterialsKey).find((item) => item.id === materialId && item.userId === currentUserId);
+    if (!material) throw demoError('Material not found', 404);
+    return {
+      data: {
+        message: 'Demo study aids generated',
+        summary: `This is a demo summary for ${material.title}. Deploy the server and configure GEMINI_API_KEY for real AI-generated content.`,
+        flashcards: [
+          { question: 'What is this page?', answer: 'A GitHub Pages demo of CogniForge.' },
+          { question: 'Where is the real database?', answer: 'In the deployed Express/Prisma backend.' },
+        ],
+        quiz: [{ question: 'What enables real AI generation?', options: ['A hosted backend with GEMINI_API_KEY', 'Only GitHub Pages', 'A browser refresh', 'A CSS file'], correctAns: 'A hosted backend with GEMINI_API_KEY' }],
+      },
+    };
+  }
+
+  throw demoError(`Demo API route not implemented: ${method.toUpperCase()} ${url}`, 404);
+};
+
+const request = (method, url, data, config) => {
+  if (!isDemoMode) return api[method](url, data, config);
+  return demoRequest(method, url, data, config);
+};
+
+const demoApi = {
+  get: (url, config) => request('get', url, undefined, config),
+  post: (url, data, config) => request('post', url, data, config),
+};
+
+export default isDemoMode ? demoApi : api;

@@ -8,6 +8,8 @@ The frontend is deployed automatically from `.github/workflows/deploy-pages.yml`
 
 GitHub Pages can host only the static React frontend. It cannot run the Express server, Prisma/SQLite database, PDF uploads, authentication, or Gemini API calls. To make signup, uploads, and AI generation work on the Pages site, deploy `server/` to a Node host with a persistent database, then add the repository variable `VITE_API_URL` with the public API URL ending in `/api`. Set `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_API_KEY` only in the backend host's secret environment; never put them in frontend code or GitHub Pages.
 
+Until a backend URL is configured, the GitHub Pages build uses a clearly limited browser demo mode. Signup, login, materials, and sample study aids are stored in that browser's localStorage, so the generic signup error does not occur. This is not production authentication or a shared database; setting `VITE_API_URL` and deploying the server switches the client back to the real API.
+
 ## What was fixed
 
 - Corrected Linux case-sensitive imports for pages, API helpers, and upload middleware.
