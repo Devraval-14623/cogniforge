@@ -520,6 +520,9 @@ function Dashboard() {
                   <h2 className="mt-1 text-xl font-semibold text-white">
                     Flashcards
                   </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Important questions and answers organized by topic
+                  </p>
 
                 </div>
 
