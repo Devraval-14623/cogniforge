@@ -2,6 +2,12 @@
 
 CogniForge is a React/Vite learning workspace with an Express API, Prisma database, PDF uploads, and optional Gemini-powered study-aid generation.
 
+## GitHub Pages deployment
+
+The frontend is deployed automatically from `.github/workflows/deploy-pages.yml` to [https://devraval-14623.github.io/cogniforge/](https://devraval-14623.github.io/cogniforge/). The workflow builds `client/`, not the repository root README.
+
+GitHub Pages can host only the static React frontend. It cannot run the Express server, Prisma/SQLite database, PDF uploads, authentication, or Gemini API calls. To make signup, uploads, and AI generation work on the Pages site, deploy `server/` to a Node host with a persistent database, then add the repository variable `VITE_API_URL` with the public API URL ending in `/api`. Set `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_API_KEY` only in the backend host's secret environment; never put them in frontend code or GitHub Pages.
+
 ## What was fixed
 
 - Corrected Linux case-sensitive imports for pages, API helpers, and upload middleware.
