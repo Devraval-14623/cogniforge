@@ -1,12 +1,15 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const prisma = require('../prisma');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 const generateStudyAids = async (req, res) => {
   try {
-    const { materialId } = req.params;
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('replace-with-')) {
+      return res.status(503).json({
+        message: 'AI generation is not configured. Set GEMINI_API_KEY on the server.',
+      });
+    }
 
+    const { materialId } = req.params;
     const material = await prisma.material.findFirst({
       where: { id: materialId, userId: req.userId },
     });
@@ -23,43 +26,27 @@ const generateStudyAids = async (req, res) => {
 Respond ONLY with valid JSON in this exact format, no other text:
 {
   "summary": "...",
-  "flashcards": [
-    { "question": "...", "answer": "..." }
-  ],
-  "quiz": [
-    { "question": "...", "options": ["...", "...", "...", "..."], "correctAns": "..." }
-  ]
+  "flashcards": [{ "question": "...", "answer": "..." }],
+  "quiz": [{ "question": "...", "options": ["...", "...", "...", "..."], "correctAns": "..." }]
 }
 
 Study Material:
 ${material.content.substring(0, 8000)}`;
 
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
     const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
-
-    const cleanText = rawText.replace(/```json|```/g, '').trim();
+    const cleanText = result.response.text().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleanText);
 
-
-    const flashcardPromises = parsed.flashcards.map((fc) =>
-      prisma.flashcard.create({
+    await prisma.$transaction([
+      ...parsed.flashcards.map((fc) => prisma.flashcard.create({
         data: { question: fc.question, answer: fc.answer, materialId: material.id },
-      })
-    );
-
-    const quizPromises = parsed.quiz.map((q) =>
-      prisma.quiz.create({
-        data: {
-          question: q.question,
-          options: q.options,
-          correctAns: q.correctAns,
-          materialId: material.id,
-        },
-      })
-    );
-
-    await Promise.all([...flashcardPromises, ...quizPromises]);
+      })),
+      ...parsed.quiz.map((q) => prisma.quiz.create({
+        data: { question: q.question, options: JSON.stringify(q.options), correctAns: q.correctAns, materialId: material.id },
+      })),
+    ]);
 
     res.status(200).json({
       message: 'Study aids generated successfully',
@@ -69,7 +56,7 @@ ${material.content.substring(0, 8000)}`;
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'AI generation failed', error: error.message });
   }
 };
 

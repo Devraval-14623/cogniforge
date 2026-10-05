@@ -19,7 +19,7 @@ const getQuizQuestions = async (req, res) => {
       return res.status(404).json({ message: 'No quiz found. Generate study aids first.' });
     }
 
-    res.status(200).json({ quiz: quizzes });
+    res.status(200).json({ quiz: quizzes.map((quiz) => ({ ...quiz, options: JSON.parse(quiz.options) })) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -29,7 +29,7 @@ const getQuizQuestions = async (req, res) => {
 // User ke answers submit karo, score calculate karo, attempt save karo
 const submitQuiz = async (req, res) => {
   try {
-    const { materialId, answers } = req.body; // answers: [{ quizId, selectedOption }]
+    const { materialId, answers = [] } = req.body; // answers: [{ quizId, selectedOption }]
 
     const material = await prisma.material.findFirst({
       where: { id: materialId, userId: req.userId },

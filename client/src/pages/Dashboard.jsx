@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../API/axios.js';
 import Sidebar from '../components/Sidebar';
 
 function Dashboard() {
@@ -11,30 +11,24 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [generatingId, setGeneratingId] = useState(null);
   const [studyAids, setStudyAids] = useState(null);
-  const [userName, setUserName] = useState('');
+  const [userName] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null')?.name || '';
+    } catch {
+      return '';
+    }
+  });
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [quizHistory, setQuizHistory] = useState([]);
+  const [quizHistory, setQuizHistory] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('quizHistory') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-  fetchMaterials();
-
-  const storedUser = localStorage.getItem('user');
-
-  if (storedUser) {
-    const user = JSON.parse(storedUser);
-    setUserName(user.name);
-  }
-
-  // Quiz history load
-  const savedHistory = localStorage.getItem('quizHistory');
-
-  if (savedHistory) {
-    setQuizHistory(JSON.parse(savedHistory));
-  }
-}, []);
 
   const fetchMaterials = async () => {
     try {
@@ -44,6 +38,18 @@ function Dashboard() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    api.get('/materials')
+      .then((res) => {
+        if (active) setMaterials(res.data.materials);
+      })
+      .catch((err) => console.error(err));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleUpload = async (e) => {
     e.preventDefault();
