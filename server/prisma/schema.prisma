@@ -32,6 +32,9 @@ model Material {
 
 model Flashcard {
   id         String   @id @default(uuid())
+  topic      String?
+  importance String?
+  importanceNote String?
   question   String
   answer     String
   material   Material @relation(fields: [materialId], references: [id])

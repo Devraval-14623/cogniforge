@@ -536,9 +536,16 @@ function Dashboard() {
 
                         <div className="mb-5 flex items-center justify-between">
 
-                          <span className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-400">
-                            Card {index + 1}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-400">
+                              Card {index + 1}
+                            </span>
+                            {fc.topic && (
+                              <span className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-slate-400">
+                                {fc.topic}
+                              </span>
+                            )}
+                          </div>
 
                           <span className="text-slate-600">
                             ✦
@@ -549,6 +556,13 @@ function Dashboard() {
                         <p className="mb-4 text-base font-semibold leading-6 text-white">
                           {fc.question}
                         </p>
+
+                        {fc.importanceNote && (
+                          <p className="mb-4 rounded-xl border border-amber-400/15 bg-amber-400/5 px-3 py-2 text-xs leading-5 text-amber-200/80">
+                            <span className="font-semibold text-amber-300">{fc.importance || 'Important'}:</span>{' '}
+                            {fc.importanceNote}
+                          </p>
+                        )}
 
                         <div className="border-t border-white/10 pt-4">
 
