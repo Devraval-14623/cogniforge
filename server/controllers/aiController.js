@@ -21,13 +21,13 @@ const generateStudyAids = async (req, res) => {
     const prompt = `You are a study assistant. Based on the following study material, generate:
 1. A concise summary (3-5 sentences covering the key points)
 2. 5 flashcards (question and answer pairs)
-3. 5 multiple choice quiz questions (with 4 options each and the correct answer)
+3. Exactly 10 important multiple choice quiz questions based only on the study material, with 4 options each and the correct answer.
 
 Respond ONLY with valid JSON in this exact format, no other text:
 {
   "summary": "...",
   "flashcards": [{ "question": "...", "answer": "..." }],
-  "quiz": [{ "question": "...", "options": ["...", "...", "...", "..."], "correctAns": "..." }]
+  "quiz": [10 objects, each with "question", "options" (exactly 4 strings), and "correctAns"]
 }
 
 Study Material:
@@ -38,6 +38,12 @@ ${material.content.substring(0, 8000)}`;
     const result = await model.generateContent(prompt);
     const cleanText = result.response.text().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleanText);
+    if (!parsed.summary || !Array.isArray(parsed.flashcards) || !Array.isArray(parsed.quiz) || parsed.quiz.length !== 10) {
+      return res.status(502).json({ message: 'AI returned an incomplete study-aid response. Please try again.' });
+    }
+    if (parsed.quiz.some((question) => !Array.isArray(question.options) || question.options.length !== 4)) {
+      return res.status(502).json({ message: 'AI returned an invalid quiz format. Please try again.' });
+    }
 
     await prisma.$transaction([
       ...parsed.flashcards.map((fc) => prisma.flashcard.create({

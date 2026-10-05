@@ -81,6 +81,28 @@ const demoRequest = async (method, url, data) => {
     const materialId = url.split('/').pop();
     const material = read(demoMaterialsKey).find((item) => item.id === materialId && item.userId === currentUserId);
     if (!material) throw demoError('Material not found', 404);
+    const demoQuestions = [
+      'What is the main subject of the uploaded material?',
+      'Which statement best summarizes the uploaded material?',
+      'What is the most important concept introduced in the material?',
+      'Which conclusion is supported by the uploaded material?',
+      'What is the primary purpose described in the material?',
+      'Which term is most relevant to the uploaded material?',
+      'What relationship is explained in the material?',
+      'Which example best represents the material’s key idea?',
+      'What should a learner remember from this material?',
+      'Which statement is consistent with the uploaded material?',
+    ].map((question, index) => ({
+      id: `demo-question-${index + 1}`,
+      question,
+      options: [
+        'The key idea described in the material',
+        'An unrelated alternative',
+        'A minor detail only',
+        'None of the above',
+      ],
+      correctAns: 'The key idea described in the material',
+    }));
     return {
       data: {
         message: 'Demo study aids generated',
@@ -89,7 +111,7 @@ const demoRequest = async (method, url, data) => {
           { question: 'What is this page?', answer: 'A GitHub Pages demo of CogniForge.' },
           { question: 'Where is the real database?', answer: 'In the deployed Express/Prisma backend.' },
         ],
-        quiz: [{ question: 'What enables real AI generation?', options: ['A hosted backend with GEMINI_API_KEY', 'Only GitHub Pages', 'A browser refresh', 'A CSS file'], correctAns: 'A hosted backend with GEMINI_API_KEY' }],
+        quiz: demoQuestions,
       },
     };
   }

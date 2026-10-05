@@ -1,6 +1,6 @@
 # CogniForge
 
-CogniForge is a React/Vite learning workspace with an Express API, Prisma database, PDF uploads, and optional Gemini-powered study-aid generation.
+CogniForge is a React/Vite learning workspace with an Express API, Prisma database, PDF uploads, and optional Gemini-powered study-aid generation. For each uploaded PDF, the real backend extracts the text and asks Gemini for a concise summary, flashcards, and exactly 10 important multiple-choice questions grounded in that file.
 
 ## GitHub Pages deployment
 
