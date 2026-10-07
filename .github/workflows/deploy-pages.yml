@@ -35,8 +35,8 @@ jobs:
       - name: Build frontend
         working-directory: client
         env:
-          # Set this repository variable to the deployed Express API URL ending in /api.
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # Override with a repository variable when the backend moves; this value is public, not a secret.
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://cogniflex-vbummwcb.manus.space/api' }}
         run: npm run build
 
       - name: Configure Pages
