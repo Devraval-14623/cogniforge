@@ -19,7 +19,7 @@ const getQuizQuestions = async (req, res) => {
       return res.status(404).json({ message: 'No quiz found. Generate study aids first.' });
     }
 
-    res.status(200).json({ quiz: quizzes.map((quiz) => ({ ...quiz, options: JSON.parse(quiz.options) })) });
+    res.status(200).json({ quiz: quizzes });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });

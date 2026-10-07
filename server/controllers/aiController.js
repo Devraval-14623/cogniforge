@@ -49,6 +49,10 @@ ${material.content.substring(0, 8000)}`;
     }
 
     await prisma.$transaction([
+      prisma.material.update({
+        where: { id: material.id },
+        data: { summary: parsed.summary },
+      }),
       ...parsed.flashcards.map((fc) => prisma.flashcard.create({
         data: {
           topic: fc.topic,
@@ -60,7 +64,7 @@ ${material.content.substring(0, 8000)}`;
         },
       })),
       ...parsed.quiz.map((q) => prisma.quiz.create({
-        data: { question: q.question, options: JSON.stringify(q.options), correctAns: q.correctAns, materialId: material.id },
+        data: { question: q.question, options: q.options, correctAns: q.correctAns, materialId: material.id },
       })),
     ]);
 

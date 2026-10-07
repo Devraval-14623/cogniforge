@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -44,7 +44,7 @@ model Flashcard {
 model Quiz {
   id         String   @id @default(uuid())
   question   String
-  options    String
+  options    String[]
   correctAns String
   material   Material @relation(fields: [materialId], references: [id])
   materialId String

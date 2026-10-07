@@ -11,13 +11,14 @@ const uploadMaterial = async (req, res) => {
 
     const { title } = req.body;
     const filePath = req.file.path;
-
-    // PDF file read karo aur text extract karo
     const dataBuffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(dataBuffer);
-    const extractedText = pdfData.text;
+    const extractedText = pdfData.text.trim();
 
-    // Database mein save karo
+    if (!extractedText) {
+      return res.status(422).json({ message: 'Could not extract readable text from this PDF' });
+    }
+
     const material = await prisma.material.create({
       data: {
         title: title || req.file.originalname,
@@ -46,6 +47,7 @@ const getMaterials = async (req, res) => {
     const materials = await prisma.material.findMany({
       where: { userId: req.userId },
       select: { id: true, title: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
     });
 
     res.status(200).json({ materials });
@@ -55,4 +57,41 @@ const getMaterials = async (req, res) => {
   }
 };
 
-module.exports = { uploadMaterial, getMaterials };
+// GET GENERATED STUDY AIDS FOR ONE MATERIAL
+const getStudyAids = async (req, res) => {
+  try {
+    const material = await prisma.material.findFirst({
+      where: { id: req.params.materialId, userId: req.userId },
+      select: {
+        id: true,
+        title: true,
+        summary: true,
+        flashcards: {
+          orderBy: { id: 'asc' },
+          select: { id: true, topic: true, importance: true, importanceNote: true, question: true, answer: true },
+        },
+        quizzes: {
+          orderBy: { id: 'asc' },
+          select: { id: true, question: true, options: true, correctAns: true },
+        },
+      },
+    });
+
+    if (!material) {
+      return res.status(404).json({ message: 'Material not found' });
+    }
+
+    res.status(200).json({
+      materialId: material.id,
+      title: material.title,
+      summary: material.summary,
+      flashcards: material.flashcards,
+      quiz: material.quizzes,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Failed to load saved study aids', error: error.message });
+  }
+};
+
+module.exports = { uploadMaterial, getMaterials, getStudyAids };

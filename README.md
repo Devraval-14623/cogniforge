@@ -1,60 +1,69 @@
 # CogniForge
 
-CogniForge is a React/Vite learning workspace with an Express API, Prisma database, PDF uploads, and optional Gemini-powered study-aid generation. For each uploaded PDF, the real backend extracts the text and asks Gemini for a concise summary, flashcards, and exactly 10 important multiple-choice questions grounded in that file.
+CogniForge is a React/Vite learning workspace with an Express API, Prisma/PostgreSQL persistence, PDF text extraction, and Gemini-powered study-aid generation. For each uploaded PDF, the backend extracts the actual text and asks Gemini for a concise summary, 8 topic-wise important flashcards, and exactly 10 important multiple-choice questions grounded in that document.
+
+## Architecture
+
+- **Frontend:** React, Vite, React Router, Axios
+- **Backend:** Node.js, Express, Multer, `pdf-parse`, JWT authentication
+- **Database:** PostgreSQL through Prisma
+- **AI:** Gemini called only from the backend
+- **Persistence:** summaries, topic-wise flashcards, and quizzes are stored with the owning material and user
 
 ## GitHub Pages deployment
 
-The frontend is deployed automatically from `.github/workflows/deploy-pages.yml` to [https://devraval-14623.github.io/cogniforge/](https://devraval-14623.github.io/cogniforge/). The workflow builds `client/`, not the repository root README.
+The GitHub Pages workflow builds `client/`. GitHub Pages can serve the frontend only; it cannot run Express, PostgreSQL, PDF extraction, authentication, or Gemini. The Pages frontend must be built with `VITE_API_URL` pointing to a deployed backend URL ending in `/api`.
 
-GitHub Pages can host only the static React frontend. It cannot run the Express server, Prisma/SQLite database, PDF uploads, authentication, or Gemini API calls. To make signup, uploads, and AI generation work on the Pages site, deploy `server/` to a Node host with a persistent database, then add the repository variable `VITE_API_URL` with the public API URL ending in `/api`. Set `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_API_KEY` only in the backend host's secret environment; never put them in frontend code or GitHub Pages.
+If the backend is not configured, the frontend shows the real API error. It never substitutes sample, mock, or browser-local study content.
 
-Until a backend URL is configured, the GitHub Pages build uses a clearly limited browser demo mode. Signup, login, materials, and sample study aids are stored in that browser's localStorage, so the generic signup error does not occur. This is not production authentication or a shared database; setting `VITE_API_URL` and deploying the server switches the client back to the real API.
-
-## What was fixed
-
-- Corrected Linux case-sensitive imports for pages, API helpers, and upload middleware.
-- Replaced the hard-coded `localhost` API URL with `VITE_API_URL` and a same-origin `/api` default.
-- Added environment templates instead of committing secrets.
-- Made the server create its upload directory automatically.
-- Added startup checks for the JWT secret and database connection.
-- Configured a self-contained SQLite database for local development and smoke testing.
-- Made Gemini initialization lazy so the server can start without exposing or hard-coding an API key; AI generation returns a clear configuration error until `GEMINI_API_KEY` is set.
-
-## Run locally
-
-Requirements: Node.js 18+.
+## Run the backend
 
 ```bash
-# Terminal 1: API
 cd server
 cp .env.example .env
-# Set JWT_SECRET in .env; add GEMINI_API_KEY to enable AI generation.
+# Set DATABASE_URL, JWT_SECRET, GEMINI_API_KEY, and FRONTEND_URL in .env.
 npm ci
-npx prisma generate
-npx prisma db push
+npm run db:setup
 npm start
+```
 
-# Terminal 2: frontend
+The server creates `uploads/` automatically and exposes `GET /health`. `npm run db:setup` generates Prisma Client and synchronizes the PostgreSQL schema.
+
+## Run the frontend
+
+```bash
 cd client
 cp .env.example .env
+# Set VITE_API_URL to the backend URL ending in /api when the backend is hosted separately.
 npm ci
 npm run dev
 ```
 
-The API runs at `http://localhost:5000` and Vite at `http://localhost:5173`. The Vite dev server proxies `/api` requests to the API. The local database is `server/prisma/dev.db`.
+The Vite development proxy sends `/api` requests to `http://localhost:5000` when `VITE_API_URL` is empty.
+
+## Real study-aid flow
+
+1. The authenticated user uploads a PDF to `POST /api/materials/upload`.
+2. The backend extracts the PDF text and rejects empty extraction.
+3. `POST /api/ai/generate/:materialId` loads the user-owned material and sends its extracted text to Gemini.
+4. The response is validated as one summary, 8 topic-wise flashcards with importance notes, and 10 MCQs with four options each.
+5. Prisma saves the summary, flashcards, and quizzes in one transaction.
+6. `GET /api/materials/:materialId/study-aids` retrieves the saved data after refresh.
+7. The dashboard renders the API response; it does not contain hardcoded study content.
 
 ## Required configuration
 
-- `DATABASE_URL`: defaults to `file:./dev.db` in the server directory.
-- `JWT_SECRET`: required for signup/login; use a long random value.
-- `GEMINI_API_KEY`: required only when generating summaries, flashcards, and quizzes. Create one in Google AI Studio and keep it only in the server environment.
-- `VITE_API_URL`: optional; leave empty for the Vite proxy, or set it to a separately hosted API URL ending in `/api`.
+- `DATABASE_URL`: PostgreSQL connection string.
+- `JWT_SECRET`: long random backend secret for signup/login tokens.
+- `GEMINI_API_KEY`: backend-only Gemini key for real generation.
+- `FRONTEND_URL`: exact frontend origin for CORS, such as `https://devraval-14623.github.io`.
+- `VITE_API_URL`: public backend URL ending in `/api`.
 
-The current Prisma schema uses SQLite so the project can run without a separate database service. For production, use a managed PostgreSQL database and update `server/prisma/schema.prisma`'s provider and `DATABASE_URL` together before migrating.
+Never place `DATABASE_URL`, `JWT_SECRET`, or `GEMINI_API_KEY` in frontend code or GitHub Pages artifacts.
 
 ## Verification
 
 ```bash
-cd client && npm run build
-cd ../server && npx prisma generate
+cd client && npm run lint && npm run build
+cd ../server && node --check index.js && npx prisma generate
 ```

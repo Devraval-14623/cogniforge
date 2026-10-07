@@ -39,11 +39,33 @@ function Dashboard() {
     }
   };
 
+  const loadSavedStudyAids = async (materialId) => {
+    try {
+      const res = await api.get(`/materials/${materialId}/study-aids`);
+      if (res.data.summary || res.data.flashcards?.length || res.data.quiz?.length) {
+        setStudyAids(res.data);
+      }
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        console.error(err);
+      }
+    }
+  };
+
   useEffect(() => {
     let active = true;
     api.get('/materials')
       .then((res) => {
-        if (active) setMaterials(res.data.materials);
+        if (!active) return;
+        const savedId = localStorage.getItem('selectedMaterialId');
+        const materialId = res.data.materials.some((material) => material.id === savedId)
+          ? savedId
+          : res.data.materials.at(-1)?.id;
+        setMaterials(res.data.materials);
+        if (materialId) {
+          localStorage.setItem('selectedMaterialId', materialId);
+          loadSavedStudyAids(materialId);
+        }
       })
       .catch((err) => console.error(err));
     return () => {
@@ -67,11 +89,12 @@ function Dashboard() {
     setLoading(true);
 
     try {
-      await api.post('/materials/upload', formData, {
+      const uploadResponse = await api.post('/materials/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+      localStorage.setItem('selectedMaterialId', uploadResponse.data.material.id);
 
       setTitle('');
       setFile(null);
@@ -97,6 +120,7 @@ function Dashboard() {
     try {
       const res = await api.post(`/ai/generate/${materialId}`);
       setStudyAids(res.data);
+      localStorage.setItem('selectedMaterialId', materialId);
 
       // Scroll to study aids
       setTimeout(() => {

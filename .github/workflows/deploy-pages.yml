@@ -37,7 +37,6 @@ jobs:
         env:
           # Set this repository variable to the deployed Express API URL ending in /api.
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-          VITE_DEMO_MODE: true
         run: npm run build
 
       - name: Configure Pages
