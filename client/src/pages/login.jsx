@@ -24,10 +24,17 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const email = formData.email.trim();
+    if (!email || !formData.password) {
+      setError('Enter your email address and password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/login', formData);
+      const res = await api.post('/auth/login', { email, password: formData.password });
 
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
@@ -36,7 +43,9 @@ function Login() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Something went wrong. Please try again.'
+          (err.response
+            ? 'Login failed. Check your email and password.'
+            : 'Unable to connect to the backend. Please try again in a moment.')
       );
     } finally {
       setLoading(false);
