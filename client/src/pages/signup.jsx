@@ -25,10 +25,22 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    if (!name || !email || !formData.password) {
+      setError('Enter your name, email address, and password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/signup', formData);
+      const res = await api.post('/auth/signup', {
+        name,
+        email,
+        password: formData.password,
+      });
 
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
@@ -37,7 +49,9 @@ function Signup() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Something went wrong. Please try again.'
+          (err.response
+            ? 'Account creation failed. Check your details and try again.'
+            : 'Unable to connect to the backend. Please try again in a moment.')
       );
     } finally {
       setLoading(false);
