@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cogniforge-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci && npm run db:setup
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://devraval-14623.github.io

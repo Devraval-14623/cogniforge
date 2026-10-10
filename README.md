@@ -16,6 +16,21 @@ The GitHub Pages workflow builds `client/`. GitHub Pages can serve the frontend 
 
 If the backend is not configured, the frontend shows the real API error. It never substitutes sample, mock, or browser-local study content.
 
+### Deploy the backend
+
+GitHub Pages cannot run the Express API. This repository includes `render.yaml` for deploying the `server/` directory as a Render web service. Connect the repository in Render, keep the existing PostgreSQL `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_API_KEY` values, and set `FRONTEND_URL` to `https://devraval-14623.github.io`. After deployment, set the Pages build variable `VITE_API_URL` to the new backend URL ending in `/api`.
+
+Verify CORS before testing the website:
+
+```bash
+curl -i -X OPTIONS https://YOUR_BACKEND_HOST/api/auth/signup \
+  -H 'Origin: https://devraval-14623.github.io' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type'
+```
+
+The response must include `Access-Control-Allow-Origin: https://devraval-14623.github.io` and must not return the GitHub Pages HTML.
+
 ## Run the backend
 
 ```bash
